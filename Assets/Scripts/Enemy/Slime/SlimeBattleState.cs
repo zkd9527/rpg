@@ -1,0 +1,151 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+
+public class SlimeBattleState : SlimeState
+{
+    private Transform player;
+
+    private int moveDirection;
+
+    public SlimeBattleState(Enemy _enemyBase, EnemyStateMachine _stateMachine, string _animBoolName, Slime _slime) : base(_enemyBase, _stateMachine, _animBoolName, _slime)
+    {
+    }
+
+    public override void Enter()
+    {
+        base.Enter();
+
+        stateTimer = enemy.aggressiveTime;
+
+        player = PlayerManager.instance.player.transform;
+
+        FacePlayer();
+
+        if (player.GetComponent<PlayerStats>().isDead)
+        {
+            stateMachine.ChangeState(enemy.moveState);
+        }
+    }
+
+    public override void Exit()
+    {
+        base.Exit();
+
+
+    }
+
+    public override void Update()
+    {
+        base.Update();
+
+        if (enemy.stateMachine.currentState != this)
+        {
+            return;
+        }
+
+
+        FacePlayer();
+
+        if (enemy.IsPlayerDetected())
+        {
+
+            stateTimer = enemy.aggressiveTime;
+
+            if (enemy.IsPlayerDetected() && Vector2.Distance(player.transform.position, enemy.transform.position) < enemy.attackDistance)
+            {
+
+                if (CanAttack())
+                {
+                    anim.SetBool("Idle", false);
+                    anim.SetBool("Move", false);
+                    stateMachine.ChangeState(enemy.attackState);
+                    return;
+                }
+            }
+        }
+        else  
+        {
+
+            if (stateTimer < 0 || Vector2.Distance(player.transform.position, enemy.transform.position) > enemy.playerScanDistance)
+            {
+                stateMachine.ChangeState(enemy.idleState);
+                return;
+            }
+        }
+
+
+        if (enemy.IsPlayerDetected() && Vector2.Distance(enemy.transform.position, player.transform.position) < enemy.attackDistance)
+        {
+            ChangeToIdleAnimation();
+            return;
+        }
+
+        if (Vector2.Distance(PlayerManager.instance.player.gameObject.transform.position, enemy.transform.position) < 1)
+            return;
+
+        if (player.position.x > enemy.transform.position.x)
+        {
+            moveDirection = 1;
+        }
+        else if (player.position.x < enemy.transform.position.x)
+        {
+            moveDirection = -1;
+        }
+
+        if (!enemy.IsGroundDetected())
+        {
+            enemy.SetVelocity(0, rb.velocity.y);
+            ChangeToIdleAnimation();
+            return;
+        }
+
+        enemy.SetVelocity(enemy.battleMoveSpeed * moveDirection, rb.velocity.y);
+        ChangeToMoveAnimation();
+
+    }
+
+    private bool CanAttack()
+    {
+        if (Time.time - enemy.lastTimeAttacked >= enemy.attackCooldown && !enemy.isKnockbacked)
+        {
+
+            enemy.attackCooldown = Random.Range(enemy.minAttackCooldown, enemy.maxAttackCooldown);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void ChangeToIdleAnimation()
+    {
+        anim.SetBool("Move", false);
+        anim.SetBool("Idle", true);
+    }
+
+    private void ChangeToMoveAnimation()
+    {
+        anim.SetBool("Idle", false);
+        anim.SetBool("Move", true);
+    }
+
+    private void FacePlayer()
+    {
+        if (player.transform.position.x < enemy.transform.position.x)
+        {
+            if (enemy.facingDirection != -1)
+            {
+                enemy.Flip();
+            }
+        }
+
+        if (player.transform.position.x > enemy.transform.position.x)
+        {
+            if (enemy.facingDirection != 1)
+            {
+                enemy.Flip();
+            }
+        }
+    }
+}

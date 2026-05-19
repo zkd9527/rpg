@@ -1,0 +1,31 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+[CreateAssetMenu(fileName = "Freeze Enemy Effect", menuName = "Data/Item Effect/Freeze Enemy Effect")]
+public class FreezeEnemy_Effect : ItemEffect
+{
+    [SerializeField] private float freezeDuration;
+
+    public override void ExecuteEffect(Transform _spawnTransform)
+    {
+        //冻结敌人效果仅在生命值低于50%时触发
+        PlayerStats playerStats = PlayerManager.instance.player.GetComponent<PlayerStats>();
+        if (playerStats.currentHP > playerStats.getMaxHP() * 0.5)
+        {
+            return;
+        }
+
+
+        Collider2D[] colliders = Physics2D.OverlapCircleAll(_spawnTransform.position, 2);
+
+        foreach (var hit in colliders)
+        {
+            if (hit.GetComponent<Enemy>() != null)
+            {
+                Enemy enemy = hit.GetComponent<Enemy>();
+                enemy.FreezeEnemyForTime(freezeDuration);
+            }
+        }
+    }
+}
